@@ -3,6 +3,8 @@ import cv2
 import numpy as np
 from utils import find_angle, find_dist, get_landmark_features, draw_text, draw_dotted_line, get_visibility
 from pygame import mixer
+import math
+
 
 class Activity:
     def __init__(self, settings, flip_frame=False):
@@ -120,14 +122,22 @@ class Activity:
         mixer.music.load(audio_dir)
         mixer.music.play()
         return
-    
+
     def process_sit_up_with_weights(self, frame: np.array, pose):
         play_sound = None
 
+        count = 0
+
         new_frame_time = time.time()
-        fps = 1/(new_frame_time-self.prev_frame_time)
+        fps = math.ceil(1/(new_frame_time-self.prev_frame_time))
         self.prev_frame_time = new_frame_time
-        fps = str(int(fps))
+
+        count += 1
+        if count == 1:
+            avg_fps = fps
+        else:
+            avg_fps = math.ceil(
+                (avg_fps * count + fps) / (count + 1))
 
         frame_height, frame_width, _ = frame.shape
 
@@ -200,7 +210,7 @@ class Activity:
 
                 draw_text(
                     frame,
-                    'CAMERA NOT ALIGNED PROPERLY!!!',
+                    'TURN TO SIDE VIEW!!!',
                     pos=(30, frame_height-60),
                     text_color=(255, 255, 230),
                     font_scale=0.65,
@@ -248,7 +258,7 @@ class Activity:
                     hip_coord = left_hip_coord
                     knee_coord = left_knee_coord
                     ankle_coord = left_ankle_coord
-                    #foot_coord = left_foot_coord
+                    # foot_coord = left_foot_coord
 
                     multiplier = -1
 
@@ -259,7 +269,7 @@ class Activity:
                     hip_coord = right_hip_coord
                     knee_coord = right_knee_coord
                     ankle_coord = right_ankle_coord
-                    #foot_coord = right_foot_coord
+                    # foot_coord = right_foot_coord
 
                     multiplier = 1
 
@@ -287,7 +297,7 @@ class Activity:
                          self.COLORS['light_blue'], 4,  lineType=self.linetype)
                 cv2.line(frame, ankle_coord, knee_coord,
                          self.COLORS['light_blue'], 4,  lineType=self.linetype)
-                #cv2.line(frame, foot_coord, ankle_coord,
+                # cv2.line(frame, foot_coord, ankle_coord,
                 #         self.COLORS['light_blue'], 4,  lineType=self.linetype)
 
                 # Plot landmark points
@@ -303,7 +313,7 @@ class Activity:
                            self.COLORS['yellow'], -1,  lineType=self.linetype)
                 cv2.circle(frame, ankle_coord, 7,
                            self.COLORS['yellow'], -1,  lineType=self.linetype)
-                #cv2.circle(frame, foot_coord, 7,
+                # cv2.circle(frame, foot_coord, 7,
                 #           self.COLORS['yellow'], -1,  lineType=self.linetype)
 
                 current_state = None
@@ -345,8 +355,8 @@ class Activity:
 
                 else:
                     # ------------------- Start Change Here 4--------------
-                    
-                    #if self.settings['HIP_THRESH'] > hip_vertical_angle:
+
+                    # if self.settings['HIP_THRESH'] > hip_vertical_angle:
                     #    self.state_tracker['DISPLAY_TEXT'][0] = True
                     #    self.state_tracker['INCORRECT_POSTURE'] = True
 
@@ -432,8 +442,8 @@ class Activity:
 
                 draw_text(
                     frame,
-                    "FPS: " + fps,
-                    pos=(int(frame_width*0.81), frame_height-30),
+                    "Average FPS: " + str(avg_fps),
+                    pos=(int(frame_width*0.58), frame_height-30),
                     text_color=(255, 255, 230),
                     font_scale=0.7,
                     text_color_bg=(102, 0, 204),
@@ -505,10 +515,18 @@ class Activity:
     def process_dumbbell_fly(self, frame: np.array, pose):
         play_sound = None
 
+        count = 0
+
         new_frame_time = time.time()
-        fps = 1/(new_frame_time-self.prev_frame_time)
+        fps = math.ceil(1/(new_frame_time-self.prev_frame_time))
         self.prev_frame_time = new_frame_time
-        fps = str(int(fps))
+
+        count += 1
+        if count == 1:
+            avg_fps = fps
+        else:
+            avg_fps = math.ceil(
+                (avg_fps * count + fps) / (count + 1))
 
         frame_height, frame_width, _ = frame.shape
 
@@ -525,29 +543,35 @@ class Activity:
             _, right_shldr_coord, right_elbow_coord, right_wrist_coord, right_hip_coord, _, right_ankle_coord, right_foot_coord = \
                 get_landmark_features(
                     landmark, self.dict_features, 'right', frame_width, frame_height)
-            
+
             mid_shldr_coord = np.add(left_shldr_coord, right_shldr_coord) // 2
-            
-            #ankle_left_visibility = get_visibility(landmark, self.dict_features, 'left', 'ankle')
-            #ankle_right_visibility = get_visibility(landmark, self.dict_features, 'right', 'ankle')
 
-            foot_left_visibility = get_visibility(landmark, self.dict_features, 'left', 'foot')
-            foot_right_visibility = get_visibility(landmark, self.dict_features, 'right', 'foot')
+            # ankle_left_visibility = get_visibility(landmark, self.dict_features, 'left', 'ankle')
+            # ankle_right_visibility = get_visibility(landmark, self.dict_features, 'right', 'ankle')
 
-            hip_left_visibility = get_visibility(landmark, self.dict_features, 'left', 'hip')
-            hip_right_visibility = get_visibility(landmark, self.dict_features, 'right', 'hip')
+            foot_left_visibility = get_visibility(
+                landmark, self.dict_features, 'left', 'foot')
+            foot_right_visibility = get_visibility(
+                landmark, self.dict_features, 'right', 'foot')
 
-            #ankle_standing_prob = (ankle_left_visibility+ankle_right_visibility) / 2
+            hip_left_visibility = get_visibility(
+                landmark, self.dict_features, 'left', 'hip')
+            hip_right_visibility = get_visibility(
+                landmark, self.dict_features, 'right', 'hip')
+
+            # ankle_standing_prob = (ankle_left_visibility+ankle_right_visibility) / 2
 
             if (foot_left_visibility == 0) and (foot_right_visibility == 0):
                 foot_standing_prob = 0
             else:
-                foot_standing_prob = (foot_left_visibility+foot_right_visibility) / 2
-            
+                foot_standing_prob = (
+                    foot_left_visibility+foot_right_visibility) / 2
+
             if (hip_left_visibility == 0) and (hip_right_visibility == 0):
                 hip_standing_prob = 0
             else:
-                hip_standing_prob = (hip_left_visibility+hip_right_visibility) / 2
+                hip_standing_prob = (
+                    hip_left_visibility+hip_right_visibility) / 2
 
             if (foot_standing_prob == 0) and (hip_standing_prob == 0):
                 standing_prob = 0
@@ -555,8 +579,8 @@ class Activity:
                 standing_prob = (foot_standing_prob + hip_standing_prob) / 2
 
             if ((foot_standing_prob > self.settings['OFFSET_THRESH']) or (hip_standing_prob > self.settings['OFFSET_THRESH'])) and \
-                (mid_shldr_coord[1] < self.settings['SHLDR_THRESH']):
-                
+                    (mid_shldr_coord[1] < self.settings['SHLDR_THRESH']):
+
                 display_inactivity = False
 
                 end_time = time.perf_counter()
@@ -605,7 +629,7 @@ class Activity:
 
                 draw_text(
                     frame,
-                    'PLEASE LAY DOWN!!!', #'CAMERA NOT ALIGNED PROPERLY!!!'
+                    'PLEASE LAY DOWN!!!',
                     pos=(30, frame_height-60),
                     text_color=(255, 255, 230),
                     font_scale=0.65,
@@ -629,7 +653,7 @@ class Activity:
                 self.state_tracker['curr_state'] = None
 
             else:
-                
+
                 self.state_tracker['INACTIVE_TIME_FRONT'] = 0.0
                 self.state_tracker['start_inactive_time_front'] = time.perf_counter(
                 )
@@ -683,7 +707,7 @@ class Activity:
                            self.COLORS['yellow'], -1,  lineType=self.linetype)
                 cv2.circle(frame, left_wrist_coord, 7,
                            self.COLORS['yellow'], -1,  lineType=self.linetype)
-                #cv2.circle(frame, left_hip_coord, 7,
+                # cv2.circle(frame, left_hip_coord, 7,
                 #           self.COLORS['yellow'], -1,  lineType=self.linetype)
                 cv2.circle(frame, right_shldr_coord, 7,
                            self.COLORS['yellow'], -1,  lineType=self.linetype)
@@ -691,9 +715,9 @@ class Activity:
                            self.COLORS['yellow'], -1,  lineType=self.linetype)
                 cv2.circle(frame, right_wrist_coord, 7,
                            self.COLORS['yellow'], -1,  lineType=self.linetype)
-                #cv2.circle(frame, right_hip_coord, 7,
+                # cv2.circle(frame, right_hip_coord, 7,
                 #           self.COLORS['yellow'], -1,  lineType=self.linetype)
-                #cv2.circle(frame, mid_knee_coord, 7,
+                # cv2.circle(frame, mid_knee_coord, 7,
                 #           self.COLORS['red'], -1,  lineType=self.linetype)
 
                 current_state = None
@@ -813,7 +837,7 @@ class Activity:
                             left_elbow_text_coord_y), self.font, 0.6, self.COLORS['light_green'], 2, lineType=self.linetype)
                 cv2.putText(frame, str(int(right_shldr_wrist_elbow_angle)), (right_elbow_text_coord_x,
                             right_elbow_text_coord_y), self.font, 0.6, self.COLORS['light_green'], 2, lineType=self.linetype)
-                                
+
                 # ------------------- End Change Here 6 --------------
                 if self.state_tracker['curr_state'] is not None:
                     draw_text(
@@ -847,8 +871,8 @@ class Activity:
 
                 draw_text(
                     frame,
-                    "FPS: " + fps,
-                    pos=(int(frame_width*0.81), frame_height-30),
+                    "Average FPS: " + str(avg_fps),
+                    pos=(int(frame_width*0.58), frame_height-30),
                     text_color=(255, 255, 230),
                     font_scale=0.7,
                     text_color_bg=(102, 0, 204),
@@ -918,10 +942,18 @@ class Activity:
     def process_barbell_curl(self, frame: np.array, pose):
         play_sound = None
 
+        count = 0
+
         new_frame_time = time.time()
-        fps = 1/(new_frame_time-self.prev_frame_time)
+        fps = math.ceil(1/(new_frame_time-self.prev_frame_time))
         self.prev_frame_time = new_frame_time
-        fps = str(int(fps))
+
+        count += 1
+        if count == 1:
+            avg_fps = fps
+        else:
+            avg_fps = math.ceil(
+                (avg_fps * count + fps) / (count + 1))
 
         frame_height, frame_width, _ = frame.shape
 
@@ -994,7 +1026,7 @@ class Activity:
 
                 draw_text(
                     frame,
-                    'CAMERA NOT ALIGNED PROPERLY!!!',
+                    'TURN TO SIDE VIEW!!!',
                     pos=(30, frame_height-60),
                     text_color=(255, 255, 230),
                     font_scale=0.65,
@@ -1131,7 +1163,6 @@ class Activity:
                     ply0 = False
                     ply1 = False
 
-
                     if self.settings['SHOULDER_THRESH'] < hip_elbow_shldr_angle:
                         self.state_tracker['DISPLAY_TEXT'][0] = True
                         self.state_tracker['INCORRECT_POSTURE'] = True
@@ -1142,7 +1173,7 @@ class Activity:
                         self.state_tracker['INCORRECT_POSTURE'] = True
                         ply1 = True
 
-                    if (ply0 == True and ply1 == True) or (ply0 == True and ply1 ==False) :
+                    if (ply0 == True and ply1 == True) or (ply0 == True and ply1 == False):
                         self.play_sound('Barbellcurl_0')
                     elif ply0 == False and ply1 == True:
                         self.play_sound('Barbellcurl_1')
@@ -1233,8 +1264,8 @@ class Activity:
 
                 draw_text(
                     frame,
-                    "FPS: " + fps,
-                    pos=(int(frame_width*0.81), frame_height-30),
+                    "Average FPS: " + str(avg_fps),
+                    pos=(int(frame_width*0.58), frame_height-30),
                     text_color=(255, 255, 230),
                     font_scale=0.7,
                     text_color_bg=(102, 0, 204),
@@ -1306,10 +1337,18 @@ class Activity:
     def process_dumbbell_lateral_raise(self, frame: np.array, pose):
         play_sound = None
 
+        count = 0
+
         new_frame_time = time.time()
-        fps = 1/(new_frame_time-self.prev_frame_time)
+        fps = math.ceil(1/(new_frame_time-self.prev_frame_time))
         self.prev_frame_time = new_frame_time
-        fps = str(int(fps))
+
+        count += 1
+        if count == 1:
+            avg_fps = fps
+        else:
+            avg_fps = math.ceil(
+                (avg_fps * count + fps) / (count + 1))
 
         frame_height, frame_width, _ = frame.shape
 
@@ -1378,7 +1417,7 @@ class Activity:
 
                 draw_text(
                     frame,
-                    'CAMERA NOT ALIGNED PROPERLY!!!',
+                    'TURN TO FRONT VIEW!!!',
                     pos=(30, frame_height-60),
                     text_color=(255, 255, 230),
                     font_scale=0.65,
@@ -1623,8 +1662,8 @@ class Activity:
 
                 draw_text(
                     frame,
-                    "FPS: " + fps,
-                    pos=(int(frame_width*0.81), frame_height-30),
+                    "Average FPS: " + str(avg_fps),
+                    pos=(int(frame_width*0.58), frame_height-30),
                     text_color=(255, 255, 230),
                     font_scale=0.7,
                     text_color_bg=(102, 0, 204),
@@ -1694,10 +1733,18 @@ class Activity:
     def process_seated_tricep_press(self, frame: np.array, pose):
         play_sound = None
 
+        count = 0
+
         new_frame_time = time.time()
-        fps = 1/(new_frame_time-self.prev_frame_time)
+        fps = math.ceil(1/(new_frame_time-self.prev_frame_time))
         self.prev_frame_time = new_frame_time
-        fps = str(int(fps))
+
+        count += 1
+        if count == 1:
+            avg_fps = fps
+        else:
+            avg_fps = math.ceil(
+                (avg_fps * count + fps) / (count + 1))
 
         frame_height, frame_width, _ = frame.shape
 
@@ -1770,7 +1817,7 @@ class Activity:
 
                 draw_text(
                     frame,
-                    'CAMERA NOT ALIGNED PROPERLY!!!',
+                    'TURN TO SIDE VIEW!!!',
                     pos=(30, frame_height-60),
                     text_color=(255, 255, 230),
                     font_scale=0.65,
@@ -1932,7 +1979,7 @@ class Activity:
                         self.state_tracker['INCORRECT_POSTURE'] = True
                         ply1 = True
 
-                    if (ply0 == True and ply1 == True) or (ply0 == True and ply1 ==False) :
+                    if (ply0 == True and ply1 == True) or (ply0 == True and ply1 == False):
                         self.play_sound('Tricep_0')
                     elif ply0 == False and ply1 == True:
                         self.play_sound('Tricep_1')
@@ -2023,8 +2070,8 @@ class Activity:
 
                 draw_text(
                     frame,
-                    "FPS: " + fps,
-                    pos=(int(frame_width*0.81), frame_height-30),
+                    "Average FPS: " + str(avg_fps),
+                    pos=(int(frame_width*0.58), frame_height-30),
                     text_color=(255, 255, 230),
                     font_scale=0.7,
                     text_color_bg=(102, 0, 204),
@@ -2096,10 +2143,18 @@ class Activity:
     def process_bent_over_dumbbell_row(self, frame: np.array, pose):
         play_sound = None
 
+        count = 0
+
         new_frame_time = time.time()
-        fps = 1/(new_frame_time-self.prev_frame_time)
+        fps = math.ceil(1/(new_frame_time-self.prev_frame_time))
         self.prev_frame_time = new_frame_time
-        fps = str(int(fps))
+
+        count += 1
+        if count == 1:
+            avg_fps = fps
+        else:
+            avg_fps = math.ceil(
+                (avg_fps * count + fps) / (count + 1))
 
         frame_height, frame_width, _ = frame.shape
 
@@ -2173,7 +2228,7 @@ class Activity:
 
                 draw_text(
                     frame,
-                    'CAMERA NOT ALIGNED PROPERLY!!!',
+                    'TURN TO SIDE VIEW!!!',
                     pos=(30, frame_height-60),
                     text_color=(255, 255, 230),
                     font_scale=0.65,
@@ -2343,7 +2398,6 @@ class Activity:
                     ply1 = False
                     ply2 = False
 
-
                     if (hip_vertical_angle < self.settings['HIP_THRESH']):
                         self.state_tracker['DISPLAY_TEXT'][0] = True
                         self.state_tracker['INCORRECT_POSTURE'] = True
@@ -2401,7 +2455,7 @@ class Activity:
                     frame = cv2.flip(frame, 1)
                     shldr_text_coord_x = frame_width - shldr_coord[0] + 15
                     hip_text_coord_x = frame_width - hip_coord[0] + 15
-                
+
                 self.state_tracker['COUNT_FRAMES'][self.state_tracker['DISPLAY_TEXT']] += 1
                 frame = self._show_feedback(
                     frame, self.state_tracker['COUNT_FRAMES'], self.settings['FEEDBACK_ID_MAP'])
@@ -2449,8 +2503,8 @@ class Activity:
 
                 draw_text(
                     frame,
-                    "FPS: " + fps,
-                    pos=(int(frame_width*0.81), frame_height-30),
+                    "Average FPS: " + str(avg_fps),
+                    pos=(int(frame_width*0.58), frame_height-30),
                     text_color=(255, 255, 230),
                     font_scale=0.7,
                     text_color_bg=(102, 0, 204),
@@ -2522,10 +2576,18 @@ class Activity:
     def process_squat_with_weights(self, frame: np.array, pose):
         play_sound = None
 
+        count = 0
+
         new_frame_time = time.time()
-        fps = 1/(new_frame_time-self.prev_frame_time)
+        fps = math.ceil(1/(new_frame_time-self.prev_frame_time))
         self.prev_frame_time = new_frame_time
-        fps = str(int(fps))
+
+        count += 1
+        if count == 1:
+            avg_fps = fps
+        else:
+            avg_fps = math.ceil(
+                (avg_fps * count + fps) / (count + 1))
 
         frame_height, frame_width, _ = frame.shape
 
@@ -2599,7 +2661,7 @@ class Activity:
 
                 draw_text(
                     frame,
-                    'CAMERA NOT ALIGNED PROPERLY!!!',
+                    'TURN TO SIDE VIEW!!!',
                     pos=(30, frame_height-60),
                     text_color=(255, 255, 230),
                     font_scale=0.65,
@@ -2734,9 +2796,9 @@ class Activity:
                     ply1 = False
 
                     if self.settings['KNEE_THRESH'][0] < knee_vertical_angle < self.settings['KNEE_THRESH'][1] and \
-                       self.state_tracker['state_seq'].count('s2') == 1 :
+                       self.state_tracker['state_seq'].count('s2') == 1:
                         self.state_tracker['DISPLAY_TEXT'][0] = True
-                        
+
                     elif knee_vertical_angle > self.settings['KNEE_THRESH'][2]:
                         self.state_tracker['DISPLAY_TEXT'][2] = True
                         self.state_tracker['INCORRECT_POSTURE'] = True
@@ -2746,7 +2808,7 @@ class Activity:
                         self.state_tracker['DISPLAY_TEXT'][1] = True
                         self.state_tracker['INCORRECT_POSTURE'] = True
                         ply1 = True
-                    
+
                     if ply2 == True:
                         self.play_sound('Squat_2')
                     elif ply2 == False and ply1 == True:
@@ -2834,8 +2896,8 @@ class Activity:
 
                 draw_text(
                     frame,
-                    "FPS: " + fps,
-                    pos=(int(frame_width*0.81), frame_height-30),
+                    "Average FPS: " + str(avg_fps),
+                    pos=(int(frame_width*0.58), frame_height-30),
                     text_color=(255, 255, 230),
                     font_scale=0.7,
                     text_color_bg=(102, 0, 204),
